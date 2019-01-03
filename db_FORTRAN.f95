@@ -31,8 +31,6 @@
 ! * Date last modified: 01-JAN-2019
 ! * GNU General Public License <http://www.gnu.org/licenses/>.
 ! * +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! gfortran -c db_FORTRAN.f95
-! gcc -c db_FORTRANLib.c utilities.o `mysql_config --cflags --libs`
 
 MODULE MySQL_data
 USE iso_c_binding,	ONLY : C_INT, C_INT128_T, C_INT16_T, C_INT64_T, &
