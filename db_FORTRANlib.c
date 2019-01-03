@@ -32,17 +32,6 @@
  * gcc -c db_FORTRANLib.c `mysql_config --cflags --libs`
  */
 
-// MEMORY MAP
-// ----------
-// 0	-	session
-// 1	-	connection
-// 2	-	host
-// 3	-	user
-// 4	-	password
-// 5	-	active database object pointer
-// 6	-	first database loaded
-// 7	->	other objects
-
 #include <my_global.h>
 #include <mysql.h>
 #include <unistd.h>
