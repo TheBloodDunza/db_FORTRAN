@@ -91,10 +91,11 @@ USE iso_c_binding,	ONLY : C_INT, C_INT128_T, C_INT16_T, C_INT64_T, &
 !	Fatal errors - immediate exit
 	CHARACTER (LEN=*), PARAMETER :: no_session =  &
 			"- db_FORTRAN Fatal Error!"//nl &
-			//"Session not instantiated! You must login!"//nl
+			//"Can't disconnect as not connected! Try logging in" &
+			// " first!"//nl
 	CHARACTER (LEN=*), PARAMETER :: no_connection  =  &
 			"- db_FORTRAN Fatal Error!"//nl &
-			//"Cannot establish database connection!";
+			//"Can't establish database connection!";
 	CHARACTER (LEN=*), PARAMETER :: memory_table_corrupted = &
 			"- db_FORTRAN Fatal Error!"//nl &
 			//"Fatal memory corruption!";
@@ -673,10 +674,11 @@ SUBROUTINE call_exit()
 USE iso_c_binding,	ONLY : C_CHAR, C_INT, C_NULL_CHAR
 USE MySQL_data, ONLY : receive_signal, no_session, &
 		no_connection, memory_table_corrupted, cant_allocate_memory, &
-		improper_disconnection
+		improper_disconnection, nl
 IMPLICIT NONE
 
 	CALL clear_send
+	PRINT*,nl
 	SELECT CASE (receive_signal%int_vaL)
 	CASE (0)
 		STOP no_session
@@ -759,7 +761,7 @@ INTEGER :: i
 	retrieve_RS = .FALSE.
 	CALL clear_send()
 	send_signal%signal = sig_retrieve_data
-	send_signal%flag = 4 !enum in C
+	send_signal%flag = 4
 	IF (RS%in_memory.EQV..TRUE.) THEN
 		send_signal%object=disclose(RS%obj)
 	END IF
@@ -777,7 +779,7 @@ INTEGER :: i
 	END IF
 	retrieve_RS = .TRUE.
 	IF (RS%in_memory .NEQV..TRUE.) THEN
-		CALL set_RS(RS, i, 4) !4 is enum in c
+		CALL set_RS(RS, i, 4) 
 	ENDIF
 	IF (ALLOCATED(what)) DEALLOCATE(what)
 	RETURN

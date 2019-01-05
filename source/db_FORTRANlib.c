@@ -1089,7 +1089,7 @@ int _item_value()
 						_message(buffer);
 						return(ret_val);
 					}
-					if (len<999)
+					if (len<1000)
 					{
 						_receive_signal.int_val = len;
 						memcpy(_receive_signal.message, RS->row[_send_signal.int_val-1], len);
