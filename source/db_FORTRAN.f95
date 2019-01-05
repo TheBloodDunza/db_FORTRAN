@@ -59,10 +59,10 @@ USE iso_c_binding,	ONLY : C_INT, C_INT128_T, C_INT16_T, C_INT64_T, &
 	TYPE(signaller), BIND(C, NAME="_receive_signal") :: receive_signal
 
 !	utility memory
-	CHARACTER (LEN=:), TARGET, ALLOCATABLE :: receive_buffer_1
-	CHARACTER (LEN=:), TARGET, ALLOCATABLE :: receive_buffer_2
-	CHARACTER (LEN=:), TARGET, ALLOCATABLE :: receive_buffer_3
-	CHARACTER (LEN=:), POINTER :: receive_buffer_p
+!	CHARACTER (LEN=:), TARGET, ALLOCATABLE :: receive_buffer_1
+!	CHARACTER (LEN=:), TARGET, ALLOCATABLE :: receive_buffer_2
+!	CHARACTER (LEN=:), TARGET, ALLOCATABLE :: receive_buffer_3
+!	CHARACTER (LEN=:), POINTER :: receive_buffer_p
 
 !	Interop signals
 	INTEGER(C_INT), PARAMETER :: sig_login = z'0'

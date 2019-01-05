@@ -46,7 +46,7 @@ PROGRAM sql
 !INTEGER i
 !LOGICAL tf
 
-	!CALL test1
+	CALL test1
 	!CALL test2
 	!CALL test4
 	!CALL test5
@@ -75,29 +75,24 @@ PROGRAM sql
 	!CALL test28
 	!CALL test29
 	!CALL test30
-	CALL test31
+	!CALL test31
 	CALL EXIT
 
 END PROGRAM sql
 
 
-SUBROUTINE test4
-USE iso_c_binding, ONLY : C_CHAR, C_NULL_CHAR, C_INT
-USE mysql_interfaces, ONLY : db_login, db_connect,  &
-		db_execute, db_retrieve_data
-USE MySQL_data, ONLY : send_signal, sig_retrieve_data
-USE MySQL_types, ONLY : db_recordset
+SUBROUTINE test1
+USE mysql_interfaces
+USE MySQL_types
 IMPLICIT NONE
 INTEGER i
 LOGICAL tf
 TYPE(db_recordset) :: my_RS
-TYPE(db_recordset) :: your_RS
 
-	tf = db_login()
-	i = db_execute("insert into Cars values(10,'Reliant Robin',69)")
-	tf = db_retrieve_data(your_RS, "select Cars.Id, name, model from" &
-			//" Cars, model where Cars.Id=model.Id order by model;")
+	tf = db_connect("localhost","stream",db_name="testdb")
+!	tf = db_execute("insert into Cars values(10,'Reliant Robin',69)")
+	tf = db_retrieve_data(my_RS, "select * from Writers;")
+	tf = db_stream(my_RS)
 	print *, tf
 
-END SUBROUTINE test4
-
+END SUBROUTINE test1
