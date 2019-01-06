@@ -57,7 +57,7 @@ USE iso_c_binding,	ONLY : C_INT, C_INT128_T, C_INT16_T, C_INT64_T, &
 	END TYPE
 	TYPE(signaller), BIND(C, NAME="_send_signal") :: send_signal
 	TYPE(signaller), BIND(C, NAME="_receive_signal") :: receive_signal
-
+!	TYPE(c_ptr) :: cptr1
 !	utility memory
 !	CHARACTER (LEN=:), TARGET, ALLOCATABLE :: receive_buffer_1
 !	CHARACTER (LEN=:), TARGET, ALLOCATABLE :: receive_buffer_2
@@ -85,10 +85,7 @@ USE iso_c_binding,	ONLY : C_INT, C_INT128_T, C_INT16_T, C_INT64_T, &
 	INTEGER(C_INT), PARAMETER :: sig_list_databases = z'11' 
 	INTEGER(C_INT), PARAMETER :: sig_next_source = z'12' !18
 
-!	Formatting
 	CHARACTER, PARAMETER :: nl = CHAR(10)
-
-!	Fatal errors - immediate exit
 	CHARACTER (LEN=*), PARAMETER :: no_session =  &
 			"- db_FORTRAN Fatal Error!"//nl &
 			//"Can't disconnect as not connected! Try logging in" &
@@ -105,8 +102,6 @@ USE iso_c_binding,	ONLY : C_INT, C_INT128_T, C_INT16_T, C_INT64_T, &
 	CHARACTER (LEN=*), PARAMETER :: improper_disconnection = &
 			"- db_FORTRAN Fatal Error!"//nl &
 			//"Failed to correctly disconnect!";
-
-	! Error messages
 	CHARACTER (LEN=*), PARAMETER :: fishy1 = &
 			"Hmm, this paramenter list looks very suspicious!"
 	CHARACTER (LEN=*), PARAMETER :: fishy2 = &
@@ -122,18 +117,12 @@ USE iso_c_binding,	ONLY : C_INT, C_INT128_T, C_INT16_T, C_INT64_T, &
 			"File name is BLANK! This is silly."
 	! Login restrictions
 	INTEGER(C_INT), BIND(C, NAME = "max_login_") :: max_login = z'40'
-
-	! data send location indicators
 	INTEGER(C_INT), PARAMETER :: ordinal = 1
 	INTEGER(C_INT), PARAMETER :: short_buffer = 2
-
-	! request type
 	INTEGER(C_INT), PARAMETER :: is_numeric = 0
 	INTEGER(C_INT), PARAMETER :: is_text = 1
 	INTEGER(C_INT), PARAMETER :: is_int = 2
 	INTEGER(C_INT), PARAMETER :: is_float = 3
-
-	! steam options
 	INTEGER(C_INT), PARAMETER :: to_screen = 0
 	INTEGER(C_INT), PARAMETER :: to_file = 1
 	INTEGER(C_INT), PARAMETER :: to_CSV = 2
@@ -1670,7 +1659,6 @@ INTEGER :: j
 		PRINT*, no_rs
 		RETURN
 	ENDIF
-	IF(ALLOCATED(string)) DEALLOCATE(string)
 	CALL clear_send_signal
 	CALL clear_receive
 	send_signal%signal = sig_item_return
@@ -1682,12 +1670,19 @@ INTEGER :: j
 	receive_signal%object = send_signal%object
 	receive_signal%flag = is_text
 	IF (c_signal(""//C_NULL_CHAR).EQ.0) THEN
-		IF(receive_signal%int_val.GE.64)THEN
+		IF(receive_signal%int_val.LT.64)THEN
+			IF(ALLOCATED(string)) DEALLOCATE(string)
+			string = TRIM(receive_signal%short_buffer)
+			db_item_alloc_s = receive_signal%int_val		
+		ELSEIF(receive_signal%int_val.LT.1000) THEN
+			IF(ALLOCATED(string)) DEALLOCATE(string)
 			string = TRIM(receive_signal%message)
 			db_item_alloc_s = receive_signal%int_val
 		ELSE
-			string = TRIM(receive_signal%short_buffer)
 			db_item_alloc_s = receive_signal%int_val
+			IF(ALLOCATED(string)) DEALLOCATE(string)
+			string=""
+PRINT*,"big big un"
 		END IF
 	END IF
 	RETURN

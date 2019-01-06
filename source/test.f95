@@ -85,14 +85,20 @@ SUBROUTINE test1
 USE mysql_interfaces
 USE MySQL_types
 IMPLICIT NONE
-INTEGER i
 LOGICAL tf
 TYPE(db_recordset) :: my_RS
+CHARACTER(LEN=:), ALLOCATABLE :: s
+INTEGER :: i
 
 	tf = db_connect("localhost","stream",db_name="testdb")
 !	tf = db_execute("insert into Cars values(10,'Reliant Robin',69)")
-	tf = db_retrieve_data(my_RS, "select * from Writers;")
-	tf = db_stream(my_RS)
-	print *, tf
+	tf = db_retrieve_data(my_RS, "select * from darkside;")
+!	tf = db_stream(my_RS)
+print*,"here",s
+	DO WHILE (db_next_row(my_RS).EQV..TRUE.)
+		i = db_item_value(my_RS,2,s)
+		PRINT*,i
+		PRINT*,s
+	END DO
 
 END SUBROUTINE test1

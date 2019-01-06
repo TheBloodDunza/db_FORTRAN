@@ -1082,7 +1082,7 @@ int _item_value()
 				}
 				else
 				{
-					if (_receive_signal.flag==IS_NUMERIC)
+					if (_receive_signal.flag>IS_TEXT)
 					{
 						n = sprintf (buffer, "Field %d %s", requested,
 									   AINT_NUMERIC);
@@ -1097,17 +1097,19 @@ int _item_value()
 					}
 					else
 					{
-						//if flag indicates char pointer
+						_receive_signal.int_val = len;
 //else long string
+printf("\nThat's big!\n");
+						ret_val = MySQL_SUCCESS;
 					}
 
 				}
 			}
 		}
 // debug
-printf("Len = %d Value in C = %s\t\n", strlen(RS->row[_send_signal.int_val-1]),
-		(RS->row[_send_signal.int_val-1] ? RS->row[_send_signal.int_val-1] : "NULL"));
-		ret_val = MySQL_SUCCESS;
+//printf("Len = %d Value in C = %s\t\n", strlen(RS->row[_send_signal.int_val-1]),
+//		(RS->row[_send_signal.int_val-1] ? RS->row[_send_signal.int_val-1] : "NULL"));
+//ret_val = MySQL_SUCCESS;
 // debug
 	}
 	return ret_val;
