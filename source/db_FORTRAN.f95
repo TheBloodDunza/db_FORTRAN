@@ -82,7 +82,7 @@ USE iso_c_binding,	ONLY : C_INT, C_INT128_T, C_INT16_T, C_INT64_T, &
 	INTEGER(C_INT), PARAMETER :: sig_item_return = z'E'
 	INTEGER(C_INT), PARAMETER :: sig_switch_database = z'F'
 	INTEGER(C_INT), PARAMETER :: sig_stream = z'10'
-	INTEGER(C_INT), PARAMETER :: sig_list_databases = z'11' 
+	INTEGER(C_INT), PARAMETER :: sig_list_databases = z'11'
 	INTEGER(C_INT), PARAMETER :: sig_next_source = z'12' !18
 
 	CHARACTER, PARAMETER :: nl = CHAR(10)
@@ -417,55 +417,55 @@ IMPLICIT NONE
 		INTEGER, INTENT(IN) :: j
 		REAL, INTENT(OUT) :: r
 		END FUNCTION db_item_real
-		
+
 		LOGICAL FUNCTION db_item_real_8(RS,j,r)
 		USE MySQL_types, ONLY : db_recordset, disclose
 		TYPE(db_recordset), INTENT(IN) :: RS
 		INTEGER, INTENT(IN) :: j
 		REAL(KIND=8), INTENT(OUT) :: r
 		END FUNCTION db_item_real_8
-		
+
 		LOGICAL FUNCTION db_item_real_16(RS,j,r)
 		USE MySQL_types, ONLY : db_recordset, disclose
 		TYPE(db_recordset), INTENT(IN) :: RS
 		INTEGER, INTENT(IN) :: j
 		REAL(KIND=16), INTENT(OUT) :: r
 		END FUNCTION db_item_real_16
-		
+
 		LOGICAL FUNCTION db_item_real_named(RS,field_name,r)
 		USE MySQL_types, ONLY : db_recordset, disclose
 		TYPE(db_recordset), INTENT(IN) :: RS
 		CHARACTER*(*), INTENT(IN) :: field_name
 		REAL, INTENT(OUT) :: r
 		END FUNCTION db_item_real_named
-		
+
 		LOGICAL FUNCTION db_item_real_8_named(RS,field_name,r)
 		USE MySQL_types, ONLY : db_recordset, disclose
 		TYPE(db_recordset), INTENT(IN) :: RS
 		CHARACTER*(*), INTENT(IN) :: field_name
 		REAL(KIND=8), INTENT(OUT) :: r
 		END FUNCTION db_item_real_8_named
-		
+
 		LOGICAL FUNCTION db_item_real_16_named(RS,field_name,r)
 		USE MySQL_types, ONLY : db_recordset, disclose
 		TYPE(db_recordset), INTENT(IN) :: RS
 		CHARACTER*(*), INTENT(IN) :: field_name
 		REAL(KIND=16), INTENT(OUT) :: r
 		END FUNCTION db_item_real_16_named
-			
+
 		INTEGER FUNCTION db_item_alloc_s(RS,j,string)
 		USE MySQL_types, ONLY : db_recordset, disclose
 		TYPE(db_recordset), INTENT(IN) :: RS
-		CHARACTER(LEN=:), ALLOCATABLE, INTENT(INOUT) :: string
+		CHARACTER(LEN=:), ALLOCATABLE, INTENT(OUT) :: string
 		END FUNCTION db_item_alloc_s
-		
+
 		INTEGER FUNCTION db_item_alloc_s_named(RS,field,string)
 		USE MySQL_types, ONLY : db_recordset, disclose
 		TYPE(db_recordset), INTENT(IN) :: RS
 		CHARACTER(LEN=:), ALLOCATABLE, INTENT(INOUT) :: string
 		CHARACTER*(*), INTENT(IN) :: field
 		END FUNCTION db_item_alloc_s_named
-		
+
 		INTEGER FUNCTION db_item_fixed_s(RS,j,string,k)
 		USE iso_c_binding,	ONLY : C_CHAR, C_INT, C_NULL_CHAR
 		USE MySQL_types, ONLY : db_recordset, disclose
@@ -473,7 +473,7 @@ IMPLICIT NONE
 		CHARACTER*(*), INTENT(OUT) :: string
 		INTEGER :: j,k
 		END FUNCTION db_item_fixed_s
-		
+
 		INTEGER FUNCTION db_item_fixed_named_s(RS,field,string,k)
 		USE MySQL_types, ONLY : db_recordset, disclose
 		TYPE(db_recordset), INTENT(IN) :: RS
@@ -481,7 +481,7 @@ IMPLICIT NONE
 		CHARACTER*(*), INTENT(IN) :: field
 		INTEGER :: j,k
 		END FUNCTION db_item_fixed_named_s
-		
+
 	END INTERFACE db_item_value
 
 	INTERFACE db_list_databases
@@ -509,15 +509,24 @@ IMPLICIT NONE
 		END FUNCTION db_stream_file
 
 	END INTERFACE db_stream
-	
+
 	INTERFACE db_next_source
 		LOGICAL FUNCTION db_next_source_RS(RS)
 		USE MySQL_types, ONLY : db_recordset, disclose
 		TYPE(db_recordset), INTENT(IN) :: RS
 		END FUNCTION db_next_source_RS
 	END INTERFACE db_next_source
+
+	INTERFACE copy_text
+		INTEGER(C_INT) FUNCTION copy_text(string) BIND &
+			(C, NAME = "_text_copy")
+		USE iso_c_binding,	ONLY : C_CHAR, C_INT
+		CHARACTER :: string
+		END FUNCTION copy_text
+	END INTERFACE copy_text
+
 	END MODULE MySQL_interfaces
-	
+
 !***********************************************************************
 
 LOGICAL FUNCTION do_login()
@@ -656,7 +665,7 @@ IMPLICIT NONE
 		CALL call_exit()
 	END IF
 	RETURN
-	
+
 END SUBROUTINE db_disconnect
 
 SUBROUTINE call_exit()
@@ -681,7 +690,7 @@ IMPLICIT NONE
 		STOP improper_disconnection
 	ENDSELECT
 	RETURN
-	
+
 END SUBROUTINE call_exit
 
 LOGICAL FUNCTION do_switch(db_name)
@@ -704,7 +713,7 @@ CHARACTER*(*), INTENT(IN) :: db_name
 		print *, fishy2
 	END IF
 	RETURN
-	
+
 END FUNCTION do_switch
 
 LOGICAL FUNCTION db_execute(str_SQL)
@@ -768,7 +777,7 @@ INTEGER :: i
 	END IF
 	retrieve_RS = .TRUE.
 	IF (RS%in_memory .NEQV..TRUE.) THEN
-		CALL set_RS(RS, i, 4) 
+		CALL set_RS(RS, i, 4)
 	ENDIF
 	IF (ALLOCATED(what)) DEALLOCATE(what)
 	RETURN
@@ -892,7 +901,7 @@ INTEGER :: i
 		db_last_RS  = .TRUE.
 	ENDIF
 	RETURN
-	
+
 END FUNCTION db_last_RS
 
 LOGICAL FUNCTION db_goto_RS(RS,i)
@@ -966,13 +975,13 @@ TYPE(db_recordset), INTENT(IN) :: RS
 		db_goto_end_RS  = .TRUE.
 	ENDIF
 	RETURN
-	
+
 END FUNCTION db_goto_end_RS
 
 LOGICAL FUNCTION db_item_int(RS,j,i)
 USE iso_c_binding,	ONLY : C_CHAR, C_INT, C_NULL_CHAR
 USE MySQL_data, ONLY : send_signal, receive_signal, no_rs, &
-						sig_item_return, ordinal, short_buffer, & 
+						sig_item_return, ordinal, short_buffer, &
 						too_small, is_numeric, is_int
 USE MySQL_types, ONLY : db_recordset, disclose
 USE MySQL_interfaces, ONLY : c_signal, clear_send_signal
@@ -1007,7 +1016,7 @@ INTEGER, INTENT(OUT) :: i
 		END IF
 	END IF
 	RETURN
-	
+
 END FUNCTION db_item_int
 
 LOGICAL FUNCTION db_item_int_named(RS,field_name,i)
@@ -1176,7 +1185,7 @@ INTEGER(KIND=2), INTENT(OUT) :: i
 		END IF
 	END IF
 	RETURN
-	
+
 END FUNCTION db_item_int_2
 
 LOGICAL FUNCTION db_item_int_2_named(RS,field_name,i)
@@ -1262,7 +1271,7 @@ INTEGER(KIND=8), INTENT(OUT) :: i
 		END IF
 	END IF
 	RETURN
-	
+
 END FUNCTION db_item_int_8
 
 LOGICAL FUNCTION db_item_int_8_named(RS,field_name,i)
@@ -1308,7 +1317,7 @@ INTEGER :: length
 		END IF
 	END IF
 	RETURN
-		
+
 END FUNCTION db_item_int_8_named
 
 LOGICAL FUNCTION db_item_int_16(RS,j,i)
@@ -1507,7 +1516,7 @@ REAL(KIND=16), INTENT(OUT) :: r
 		END IF
 	END IF
 	RETURN
-	
+
 END FUNCTION db_item_real_16
 
 LOGICAL FUNCTION db_item_real_named(RS,field_name,r)
@@ -1648,11 +1657,11 @@ USE MySQL_data, ONLY : send_signal, receive_signal, no_rs, &
 					sig_item_return, fishy2, ordinal, short_buffer, &
 					too_small, is_text
 USE MySQL_types, ONLY : db_recordset, disclose
-USE MySQL_interfaces, ONLY : c_signal, clear_send_signal
+USE MySQL_interfaces, ONLY : c_signal, clear_send_signal, copy_text
 IMPLICIT NONE
 TYPE(db_recordset), INTENT(IN) :: RS
 CHARACTER(LEN=:), ALLOCATABLE, INTENT(OUT) :: string
-INTEGER :: j
+INTEGER :: j,k
 
 	db_item_alloc_s = 0
 	IF (RS%in_memory.NEQV..TRUE.) THEN
@@ -1673,20 +1682,20 @@ INTEGER :: j
 		IF(receive_signal%int_val.LT.64)THEN
 			IF(ALLOCATED(string)) DEALLOCATE(string)
 			string = TRIM(receive_signal%short_buffer)
-			db_item_alloc_s = receive_signal%int_val		
+			db_item_alloc_s = receive_signal%int_val
 		ELSEIF(receive_signal%int_val.LT.1000) THEN
 			IF(ALLOCATED(string)) DEALLOCATE(string)
 			string = TRIM(receive_signal%message)
 			db_item_alloc_s = receive_signal%int_val
 		ELSE
-			db_item_alloc_s = receive_signal%int_val
 			IF(ALLOCATED(string)) DEALLOCATE(string)
-			string=""
-PRINT*,"big big un"
+			ALLOCATE(CHARACTER(len=receive_signal%int_val) :: string)
+            k=copy_text(string)
+            db_item_alloc_s = receive_signal%int_val
 		END IF
 	END IF
 	RETURN
-	
+
 END FUNCTION db_item_alloc_s
 
 INTEGER FUNCTION db_item_fixed_s(RS,j,string,k)
@@ -1718,7 +1727,7 @@ INTEGER :: j,k
 	receive_signal%flag = is_text
 	IF (c_signal(""//C_NULL_CHAR).EQ.0) THEN
 		IF(receive_signal%int_val.GE.64)THEN
-			string = TRIM(receive_signal%message)
+		    string = TRIM(receive_signal%message)
 			db_item_fixed_s = receive_signal%int_val
 		ELSE
 			string = TRIM(receive_signal%short_buffer)
@@ -1726,7 +1735,7 @@ INTEGER :: j,k
 		END IF
 	END IF
 	RETURN
-	
+
 END FUNCTION db_item_fixed_s
 
 INTEGER FUNCTION db_item_fixed_named_s(RS,field,string,k)
@@ -1758,15 +1767,15 @@ INTEGER :: j,k
 	receive_signal%flag = is_text
 	IF (c_signal(""//C_NULL_CHAR).EQ.0) THEN
 		IF(receive_signal%int_val.GE.64)THEN
-			string = TRIM(receive_signal%message)
-			db_item_fixed_named_s = receive_signal%int_val
+			    string = TRIM(receive_signal%message)
+			    db_item_fixed_named_s = receive_signal%int_val
 		ELSE
 			string = TRIM(receive_signal%short_buffer)
 			db_item_fixed_named_s = receive_signal%int_val
 		END IF
 	END IF
 	RETURN
-	
+
 END FUNCTION db_item_fixed_named_s
 
 INTEGER FUNCTION db_item_alloc_s_named(RS,field,string)
@@ -1805,14 +1814,18 @@ INTEGER :: length
 	receive_signal%flag = is_text
 	IF (c_signal(""//C_NULL_CHAR).EQ.0)THEN
 		IF(receive_signal%int_val.GE.64)THEN
-			string = TRIM(receive_signal%message)
-			db_item_alloc_s_named = receive_signal%int_val
+				IF(receive_signal%int_val.GE.1000)THEN
+PRINT*, "caught it here"
+                ELSE
+			        string = TRIM(receive_signal%message)
+			        db_item_alloc_s_named = receive_signal%int_val
+			    ENDIF
 		ELSE
 			string = TRIM(receive_signal%short_buffer)
 			db_item_alloc_s_named = receive_signal%int_val
 		END IF
 	END IF
-	
+
 END FUNCTION db_item_alloc_s_named
 
 SUBROUTINE db_list_dbs()
@@ -1921,5 +1934,5 @@ TYPE(db_recordset), INTENT(IN) :: RS
 		db_next_source_RS=.TRUE.
 	ENDIF
 	RETURN
-	
+
 END FUNCTION db_next_source_RS

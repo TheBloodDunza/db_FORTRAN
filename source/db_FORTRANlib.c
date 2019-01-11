@@ -133,6 +133,14 @@ struct _session
 	unsigned short db_attached;
 }_the_session;
 
+struct _long_text
+{
+    int ref;
+    int ordinal;
+    char * text;
+    int len;
+}_the_only_one;
+
 struct _database
 {
 	enum _object_types o_type;
@@ -223,6 +231,7 @@ void _message(const char * info);
 void _blank_slate();
 void _list_databases();
 int _stream();
+int _text_copy(char * s);
 
 // Problematic errors
 static const char * DB_ALREADY_CONNECTED =
@@ -239,7 +248,7 @@ static const char * RECORDSET_RANGE =
 		"Requested row is OUTSIDE the recordset range!";
 static const char * LOCO_INCOGNITO =
 		"Unimplemented parameter transmission location: ";
-static const char * AINT_GOT_THAT = 
+static const char * AINT_GOT_THAT =
 	"db_FORTRAN warning: Requested field %s is not in this recordset!";
 // login messages
 static const char * HOST_MSG = "Host [Max %d characters]: ";
@@ -258,13 +267,13 @@ static const char * AINT_NUMERIC = "of this collection is not a numeric.";
 static const char * DB_SWITCHED = "OK, switched to new database: %s";
 static const char * CANT_OPEN_FILE = "Failed to open file: ";
 static const char * db_FORTRAN_ERROR = "db_FORTRAN Error";
-static const char * NOT_INT = 
+static const char * NOT_INT =
 	"db_FORTRAN Warning: requested field does NOT contain an integer!";
-static const char * NOT_REAL = 
+static const char * NOT_REAL =
 	"db_FORTRAN Warning: requested field does NOT contain a real value!";
-static const char * MIXED_CONTENT = 
+static const char * MIXED_CONTENT =
 	"db_FORTRAN Warning: requested field has NON-NUMERICAL data:";
-static const char * NO_MORE_RS = 
+static const char * NO_MORE_RS =
 	"db_FORTRAN Info: no more recordsets available.";
 
 int _c_signal(char * what)
@@ -976,7 +985,7 @@ int _item_value()
 	int ret_val = MySQL_GENERAL_FAIL;
 	int len;
 	_rs * RS = (_rs *) _object_ptr(_send_signal.object, RECORDSET);
-	
+
 	if (RS==NULL)
 	{
 		_message(NOT_A_RECORDSET);
@@ -1022,7 +1031,7 @@ int _item_value()
 							char *p;
 							char *s;
 							long ret;
-							
+
 							s=RS->row[_send_signal.int_val-1];
 							ret = strtol(s, &p, 10);
 							if(p==s)
@@ -1043,13 +1052,13 @@ int _item_value()
 								ret_val = MySQL_SUCCESS;
 							}
 							break;
-						}						
+						}
 						case IS_FLOAT:
 						{
 							char *p;
 							char *s;
 							double ret;
-							
+
 							s=RS->row[_send_signal.int_val-1];
 							ret = strtod(s, &p);
 							if(p==s)
@@ -1092,25 +1101,26 @@ int _item_value()
 					if (len<1000)
 					{
 						_receive_signal.int_val = len;
-						memcpy(_receive_signal.message, RS->row[_send_signal.int_val-1], len);
+						memcpy(_receive_signal.message,
+						        RS->row[_send_signal.int_val-1], len);
 						ret_val = MySQL_SUCCESS;
 					}
 					else
 					{
 						_receive_signal.int_val = len;
 //else long string
-printf("\nThat's big!\n");
+printf("\nThat's big! %d\n",len);
+//new stuff here
+                        _the_only_one.ref=_send_signal.object;
+                        _the_only_one.ordinal=_send_signal.int_val-1;
+                        _the_only_one.len=len;
+                        _receive_signal.int_val=len;
 						ret_val = MySQL_SUCCESS;
 					}
 
 				}
 			}
 		}
-// debug
-//printf("Len = %d Value in C = %s\t\n", strlen(RS->row[_send_signal.int_val-1]),
-//		(RS->row[_send_signal.int_val-1] ? RS->row[_send_signal.int_val-1] : "NULL"));
-//ret_val = MySQL_SUCCESS;
-// debug
 	}
 	return ret_val;
 }
@@ -1235,7 +1245,7 @@ int _stream()
 int _next_source()
 {
 	int ret_val=MySQL_GENERAL_FAIL;
-	int ref = _send_signal.object;	
+	int ref = _send_signal.object;
 	if(mysql_more_results(CONNECTION)==0)
 	{
 		_message(NO_MORE_RS);
@@ -1271,4 +1281,18 @@ int _next_source()
 	fields = mysql_fetch_fields(RS->result);
 	RS->metadata = fields;
 	return MySQL_SUCCESS;
+}
+
+int _text_copy(char * s)
+{
+    int ret_val = MySQL_GENERAL_FAIL;
+    _rs * RS = (_rs *) _object_ptr(_the_only_one.ref, RECORDSET);
+
+    if (RS->row[_the_only_one.ordinal])
+    {
+        memcpy((void *) s,(const void *) RS->row[_the_only_one.ordinal],
+                _the_only_one.len);
+        ret_val = MySQL_SUCCESS;
+    }
+    return ret_val;
 }
