@@ -34,7 +34,7 @@
 
 MODULE MySQL_data
 USE iso_c_binding,	ONLY : C_INT, C_INT128_T, C_INT16_T, C_INT64_T, &
-		C_INT32_T, C_FLOAT, C_DOUBLE, C_LONG_DOUBLE
+		C_INT32_T, C_FLOAT, C_DOUBLE, C_LONG_DOUBLE, C_PTR
 
 	TYPE, BIND(C) :: signaller
 		INTEGER(C_INT) :: signal
@@ -57,14 +57,10 @@ USE iso_c_binding,	ONLY : C_INT, C_INT128_T, C_INT16_T, C_INT64_T, &
 	END TYPE
 	TYPE(signaller), BIND(C, NAME="_send_signal") :: send_signal
 	TYPE(signaller), BIND(C, NAME="_receive_signal") :: receive_signal
-!	TYPE(c_ptr) :: cptr1
-!	utility memory
-!	CHARACTER (LEN=:), TARGET, ALLOCATABLE :: receive_buffer_1
-!	CHARACTER (LEN=:), TARGET, ALLOCATABLE :: receive_buffer_2
-!	CHARACTER (LEN=:), TARGET, ALLOCATABLE :: receive_buffer_3
-!	CHARACTER (LEN=:), POINTER :: receive_buffer_p
-
-!	Interop signals
+	TYPE, BIND(C) :: setting
+		INTEGER(C_INT) :: multiples_allowed
+		INTEGER(C_INT) :: nulls_shown
+	END TYPE
 	INTEGER(C_INT), PARAMETER :: sig_login = z'0'
 	INTEGER(C_INT), PARAMETER :: sig_connect = z'1'
 	INTEGER(C_INT), PARAMETER :: sig_disconnect = z'2'
@@ -470,7 +466,7 @@ IMPLICIT NONE
 		USE iso_c_binding,	ONLY : C_CHAR, C_INT, C_NULL_CHAR
 		USE MySQL_types, ONLY : db_recordset, disclose
 		TYPE(db_recordset), INTENT(IN) :: RS
-		CHARACTER*(*), INTENT(OUT) :: string
+		CHARACTER*(*) :: string
 		INTEGER :: j,k
 		END FUNCTION db_item_fixed_s
 
@@ -524,6 +520,13 @@ IMPLICIT NONE
 		CHARACTER :: string
 		END FUNCTION copy_text
 	END INTERFACE copy_text
+
+	INTERFACE db_setting
+		SUBROUTINE db_setting(multiple_sources, show_nulls)
+		LOGICAL, INTENT(IN), OPTIONAL :: multiple_sources
+		LOGICAL, INTENT(IN), OPTIONAL :: show_nulls
+		END SUBROUTINE db_setting
+	END INTERFACE db_setting
 
 	END MODULE MySQL_interfaces
 
@@ -1683,10 +1686,6 @@ INTEGER :: j,k
 			IF(ALLOCATED(string)) DEALLOCATE(string)
 			string = TRIM(receive_signal%short_buffer)
 			db_item_alloc_s = receive_signal%int_val
-		ELSEIF(receive_signal%int_val.LT.1000) THEN
-			IF(ALLOCATED(string)) DEALLOCATE(string)
-			string = TRIM(receive_signal%message)
-			db_item_alloc_s = receive_signal%int_val
 		ELSE
 			IF(ALLOCATED(string)) DEALLOCATE(string)
 			ALLOCATE(CHARACTER(len=receive_signal%int_val) :: string)
@@ -1698,98 +1697,18 @@ INTEGER :: j,k
 
 END FUNCTION db_item_alloc_s
 
-INTEGER FUNCTION db_item_fixed_s(RS,j,string,k)
-USE iso_c_binding,	ONLY : C_CHAR, C_INT, C_NULL_CHAR
-USE MySQL_data, ONLY : send_signal, receive_signal, no_rs, &
-					sig_item_return, fishy2, ordinal, short_buffer, &
-					too_small, is_text
-USE MySQL_types, ONLY : db_recordset, disclose
-USE MySQL_interfaces, ONLY : c_signal, clear_send_signal
-IMPLICIT NONE
-TYPE(db_recordset), INTENT(IN) :: RS
-CHARACTER*(*), INTENT(OUT) :: string
-INTEGER :: j,k
-
-	db_item_fixed_s = 0
-	IF (RS%in_memory.NEQV..TRUE.) THEN
-		PRINT*, no_rs
-		RETURN
-	ENDIF
-	CALL clear_send_signal
-	CALL clear_receive
-	send_signal%signal = sig_item_return
-	send_signal%object = disclose(RS%obj)
-	send_signal%short_buffer = C_CHAR_""//C_NULL_CHAR
-	send_signal%flag = 4
-	send_signal%int_val = j
-	send_signal%int_val_16 = ordinal
-	receive_signal%object = send_signal%object
-	receive_signal%flag = is_text
-	IF (c_signal(""//C_NULL_CHAR).EQ.0) THEN
-		IF(receive_signal%int_val.GE.64)THEN
-		    string = TRIM(receive_signal%message)
-			db_item_fixed_s = receive_signal%int_val
-		ELSE
-			string = TRIM(receive_signal%short_buffer)
-			db_item_fixed_s = receive_signal%int_val
-		END IF
-	END IF
-	RETURN
-
-END FUNCTION db_item_fixed_s
-
-INTEGER FUNCTION db_item_fixed_named_s(RS,field,string,k)
-USE iso_c_binding,	ONLY : C_CHAR, C_INT, C_NULL_CHAR
-USE MySQL_data, ONLY : send_signal, receive_signal, no_rs, &
-					sig_item_return, fishy2, ordinal, short_buffer, &
-					too_small, is_text
-USE MySQL_types, ONLY : db_recordset, disclose
-USE MySQL_interfaces, ONLY : c_signal, clear_send_signal
-IMPLICIT NONE
-TYPE(db_recordset), INTENT(IN) :: RS
-CHARACTER*(*), INTENT(OUT) :: string
-CHARACTER*(*), INTENT(IN) :: field
-INTEGER :: j,k
-
-	db_item_fixed_named_s = 0
-	IF (RS%in_memory.NEQV..TRUE.) THEN
-		PRINT*, no_rs
-		RETURN
-	ENDIF
-	CALL clear_send_signal
-	CALL clear_receive
-	send_signal%signal = sig_item_return
-	send_signal%object = disclose(RS%obj)
-	send_signal%short_buffer = C_CHAR_""//field//C_NULL_CHAR
-	send_signal%int_val_16 = short_buffer
-	send_signal%flag = 4
-	receive_signal%object = send_signal%object
-	receive_signal%flag = is_text
-	IF (c_signal(""//C_NULL_CHAR).EQ.0) THEN
-		IF(receive_signal%int_val.GE.64)THEN
-			    string = TRIM(receive_signal%message)
-			    db_item_fixed_named_s = receive_signal%int_val
-		ELSE
-			string = TRIM(receive_signal%short_buffer)
-			db_item_fixed_named_s = receive_signal%int_val
-		END IF
-	END IF
-	RETURN
-
-END FUNCTION db_item_fixed_named_s
-
 INTEGER FUNCTION db_item_alloc_s_named(RS,field,string)
 USE iso_c_binding,	ONLY : C_CHAR, C_INT, C_NULL_CHAR
 USE MySQL_data, ONLY : send_signal, receive_signal, no_rs, &
 					sig_item_return, fishy2, ordinal, short_buffer, &
 					too_small, is_text
 USE MySQL_types, ONLY : db_recordset, disclose
-USE MySQL_interfaces, ONLY : c_signal, clear_send_signal
+USE MySQL_interfaces, ONLY : c_signal, clear_send_signal, copy_text
 IMPLICIT NONE
 TYPE(db_recordset), INTENT(IN) :: RS
 CHARACTER(LEN=:), ALLOCATABLE, INTENT(INOUT) :: string
 CHARACTER*(*), INTENT(IN) :: field
-INTEGER :: length
+INTEGER :: j,k, length
 
 	db_item_alloc_s_named = 0
 	length = LEN(field)
@@ -1813,20 +1732,112 @@ INTEGER :: length
 	receive_signal%int_val = 0
 	receive_signal%flag = is_text
 	IF (c_signal(""//C_NULL_CHAR).EQ.0)THEN
-		IF(receive_signal%int_val.GE.64)THEN
-				IF(receive_signal%int_val.GE.1000)THEN
-PRINT*, "caught it here"
-                ELSE
-			        string = TRIM(receive_signal%message)
-			        db_item_alloc_s_named = receive_signal%int_val
-			    ENDIF
-		ELSE
+		IF(receive_signal%int_val.LT.64)THEN
+			IF(ALLOCATED(string)) DEALLOCATE(string)
 			string = TRIM(receive_signal%short_buffer)
 			db_item_alloc_s_named = receive_signal%int_val
+		ELSE
+			IF(ALLOCATED(string)) DEALLOCATE(string)
+			ALLOCATE(CHARACTER(len=receive_signal%int_val) :: string)
+            k=copy_text(string)
+            db_item_alloc_s_named = receive_signal%int_val
 		END IF
 	END IF
 
 END FUNCTION db_item_alloc_s_named
+
+INTEGER FUNCTION db_item_fixed_s(RS,j,string,k)
+USE iso_c_binding,	ONLY : C_CHAR, C_INT, C_NULL_CHAR
+USE MySQL_data, ONLY : send_signal, receive_signal, no_rs, &
+					sig_item_return, fishy2, ordinal, short_buffer, &
+					too_small, is_text
+USE MySQL_types, ONLY : db_recordset, disclose
+USE MySQL_interfaces, ONLY : c_signal, clear_send_signal, copy_text
+IMPLICIT NONE
+TYPE(db_recordset), INTENT(IN) :: RS
+CHARACTER*(*) :: string
+INTEGER :: j,k, length
+
+	db_item_fixed_s = 0
+	IF (RS%in_memory.NEQV..TRUE.) THEN
+		PRINT*, no_rs
+		RETURN
+	ENDIF
+	CALL clear_send_signal
+	CALL clear_receive
+	send_signal%signal = sig_item_return
+	send_signal%object = disclose(RS%obj)
+	send_signal%short_buffer = C_CHAR_""//C_NULL_CHAR
+	send_signal%flag = 4
+	send_signal%int_val = j
+	send_signal%int_val_16 = ordinal
+	length = LEN(string)
+	IF(length<k) THEN
+	    send_signal%int_val_32 = length
+	ELSE
+	    send_signal%int_val_32 = k
+	ENDIF
+	receive_signal%object = send_signal%object
+	receive_signal%flag = is_text
+	IF (c_signal(""//C_NULL_CHAR).EQ.0) THEN
+		IF(receive_signal%int_val.GE.64)THEN
+			db_item_fixed_s = receive_signal%int_val
+			k=copy_text(string)
+            db_item_fixed_s = receive_signal%int_val
+        ELSE
+		    string = TRIM(receive_signal%short_buffer)
+		    db_item_fixed_s = receive_signal%int_val
+        END IF
+	END IF
+	RETURN
+
+END FUNCTION db_item_fixed_s
+
+INTEGER FUNCTION db_item_fixed_named_s(RS,field,string,k)
+USE iso_c_binding,	ONLY : C_CHAR, C_INT, C_NULL_CHAR
+USE MySQL_data, ONLY : send_signal, receive_signal, no_rs, &
+					sig_item_return, fishy2, ordinal, short_buffer, &
+					too_small, is_text
+USE MySQL_types, ONLY : db_recordset, disclose
+USE MySQL_interfaces, ONLY : c_signal, clear_send_signal
+IMPLICIT NONE
+TYPE(db_recordset), INTENT(IN) :: RS
+CHARACTER*(*), INTENT(OUT) :: string
+CHARACTER*(*), INTENT(IN) :: field
+INTEGER :: j,k, length
+
+	db_item_fixed_named_s = 0
+	IF (RS%in_memory.NEQV..TRUE.) THEN
+		PRINT*, no_rs
+		RETURN
+	ENDIF
+	CALL clear_send_signal
+	CALL clear_receive
+	send_signal%signal = sig_item_return
+	send_signal%object = disclose(RS%obj)
+	send_signal%short_buffer = C_CHAR_""//field//C_NULL_CHAR
+	send_signal%int_val_16 = short_buffer
+	send_signal%flag = 4
+	receive_signal%object = send_signal%object
+	receive_signal%flag = is_text
+	length = LEN(string)
+	IF(length<k) THEN
+	    send_signal%int_val_32 = length
+	ELSE
+	    send_signal%int_val_32 = k
+	ENDIF
+	IF (c_signal(""//C_NULL_CHAR).EQ.0) THEN
+		IF(receive_signal%int_val.GE.64)THEN
+			    string = TRIM(receive_signal%message)
+			    db_item_fixed_named_s = receive_signal%int_val
+		ELSE
+			string = TRIM(receive_signal%short_buffer)
+			db_item_fixed_named_s = receive_signal%int_val
+		END IF
+	END IF
+	RETURN
+
+END FUNCTION db_item_fixed_named_s
 
 SUBROUTINE db_list_dbs()
 USE iso_c_binding,	ONLY : C_CHAR, C_INT, C_NULL_CHAR
@@ -1936,3 +1947,8 @@ TYPE(db_recordset), INTENT(IN) :: RS
 	RETURN
 
 END FUNCTION db_next_source_RS
+
+SUBROUTINE db_setting(multiple_sources, show_nulls)
+LOGICAL, INTENT(IN), OPTIONAL :: multiple_sources
+LOGICAL, INTENT(IN), OPTIONAL :: show_nulls
+END SUBROUTINE db_setting

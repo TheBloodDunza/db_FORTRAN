@@ -1022,7 +1022,7 @@ int _item_value()
 			if (RS->row[_send_signal.int_val-1])
 			{
 				len = strlen(RS->row[_send_signal.int_val-1]);
-				if (len<64)
+				if ((len<64) || (_send_signal.int_val_32>0))
 				{
 					switch(_receive_signal.flag)
 					{
@@ -1082,10 +1082,28 @@ int _item_value()
 						}
 						case IS_TEXT:
 						{
-							_receive_signal.int_val = len;
-							memcpy(_receive_signal.short_buffer,
+						    if(_send_signal.int_val_32>0)
+						    {
+						        if(_send_signal.int_val_32>len)
+						        {
+						            memcpy(_receive_signal.short_buffer,
+									    RS->row[_send_signal.int_val-1], len);
+						        }
+						        else
+						        {
+						            memcpy(_receive_signal.short_buffer,
+									    RS->row[_send_signal.int_val-1]
+									    ,_send_signal.int_val_32 );
+						        }
+						        ret_val = MySQL_SUCCESS;
+						    }
+						    else
+						    {
+							    _receive_signal.int_val = len;
+							    memcpy(_receive_signal.short_buffer,
 									RS->row[_send_signal.int_val-1], len);
-							ret_val = MySQL_SUCCESS;
+							    ret_val = MySQL_SUCCESS;
+						    }
 						}
 					}
 				}
@@ -1098,31 +1116,29 @@ int _item_value()
 						_message(buffer);
 						return(ret_val);
 					}
-					if (len<1000)
-					{
-						_receive_signal.int_val = len;
-						memcpy(_receive_signal.message,
-						        RS->row[_send_signal.int_val-1], len);
-						ret_val = MySQL_SUCCESS;
-					}
-					else
-					{
-						_receive_signal.int_val = len;
-//else long string
-printf("\nThat's big! %d\n",len);
-//new stuff here
-                        _the_only_one.ref=_send_signal.object;
-                        _the_only_one.ordinal=_send_signal.int_val-1;
-                        _the_only_one.len=len;
-                        _receive_signal.int_val=len;
-						ret_val = MySQL_SUCCESS;
-					}
-
+					_the_only_one.len=len;
+					_receive_signal.int_val = len;
+					_the_only_one.ref=_send_signal.object;
+                    _the_only_one.ordinal=_send_signal.int_val-1;
+					ret_val = MySQL_SUCCESS;
 				}
 			}
 		}
 	}
 	return ret_val;
+}
+
+int _text_copy(char * s)
+{
+    int ret_val = MySQL_GENERAL_FAIL;
+    _rs * RS = (_rs *) _object_ptr(_the_only_one.ref, RECORDSET);
+    if (RS->row[_the_only_one.ordinal])
+    {
+        memcpy((void *) s,(const void *) RS->row[_the_only_one.ordinal]
+                ,_the_only_one.len);
+        ret_val = MySQL_SUCCESS;
+    }
+    return ret_val;
 }
 
 int _get_item_ordinal(const _rs * RS)
@@ -1133,7 +1149,6 @@ int _get_item_ordinal(const _rs * RS)
 		//(MYSQL_FIELD *) ((_rs*) OBJECT_TABLE[_send_signal.object])->metadata[i].name
 		if (strcmp(_send_signal.short_buffer, RS->metadata[i].name)==0)
 		{
-printf("got it: %d\t%s\t%s\n", i, _send_signal.short_buffer, RS->metadata[i].name);
 			ret_val=i+1;
 			_send_signal.int_val=i+1;
 			return ret_val;
@@ -1283,16 +1298,3 @@ int _next_source()
 	return MySQL_SUCCESS;
 }
 
-int _text_copy(char * s)
-{
-    int ret_val = MySQL_GENERAL_FAIL;
-    _rs * RS = (_rs *) _object_ptr(_the_only_one.ref, RECORDSET);
-
-    if (RS->row[_the_only_one.ordinal])
-    {
-        memcpy((void *) s,(const void *) RS->row[_the_only_one.ordinal],
-                _the_only_one.len);
-        ret_val = MySQL_SUCCESS;
-    }
-    return ret_val;
-}
