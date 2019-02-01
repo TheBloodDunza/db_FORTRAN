@@ -61,6 +61,7 @@ USE iso_c_binding,	ONLY : C_INT, C_INT128_T, C_INT16_T, C_INT64_T, &
 		INTEGER(C_INT) :: multiples_allowed
 		INTEGER(C_INT) :: nulls_shown
 	END TYPE
+	TYPE(setting), BIND(C, NAME="_DB_setting") :: DB_setting
 	INTEGER(C_INT), PARAMETER :: sig_login = z'0'
 	INTEGER(C_INT), PARAMETER :: sig_connect = z'1'
 	INTEGER(C_INT), PARAMETER :: sig_disconnect = z'2'
@@ -521,12 +522,19 @@ IMPLICIT NONE
 		END FUNCTION copy_text
 	END INTERFACE copy_text
 
-	INTERFACE db_setting
-		SUBROUTINE db_setting(multiple_sources, show_nulls)
+	INTERFACE db_settings
+		SUBROUTINE db_settings(multiple_sources, show_nulls)
 		LOGICAL, INTENT(IN), OPTIONAL :: multiple_sources
 		LOGICAL, INTENT(IN), OPTIONAL :: show_nulls
-		END SUBROUTINE db_setting
-	END INTERFACE db_setting
+		END SUBROUTINE db_settings
+	END INTERFACE db_settings
+
+	INTERFACE session_started
+		INTEGER(C_INT) FUNCTION session_started() BIND &
+			(C, NAME = "_session_in_progress")
+		USE iso_c_binding,	ONLY : C_CHAR, C_INT
+		END FUNCTION session_started
+	END INTERFACE session_started
 
 	END MODULE MySQL_interfaces
 
@@ -1948,7 +1956,30 @@ TYPE(db_recordset), INTENT(IN) :: RS
 
 END FUNCTION db_next_source_RS
 
-SUBROUTINE db_setting(multiple_sources, show_nulls)
+SUBROUTINE db_settings(multiple_sources, show_nulls)
+USE iso_c_binding,	ONLY : C_CHAR, C_INT, C_NULL_CHAR
+USE MySQL_data, ONLY : DB_setting
+USE MySQL_interfaces, ONLY: session_started
+IMPLICIT NONE
 LOGICAL, INTENT(IN), OPTIONAL :: multiple_sources
 LOGICAL, INTENT(IN), OPTIONAL :: show_nulls
-END SUBROUTINE db_setting
+
+    IF(PRESENT(multiple_sources)) THEN
+        IF(multiple_sources.EQV..FALSE.) THEN
+		    DB_setting%multiples_allowed = 0
+		    IF(session_started().EQ.1) THEN
+		        PRINT*,"This will only ..."
+		    END IF
+		ELSE
+		    DB_setting%multiples_allowed = 1
+		END IF
+	END IF
+	IF(PRESENT(show_nulls)) THEN
+        IF(show_nulls.EQV..TRUE.) THEN
+		    DB_setting%nulls_shown = 1
+		ELSE
+		    DB_setting%nulls_shown = 1
+		END IF
+	END IF
+
+END SUBROUTINE db_settings

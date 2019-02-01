@@ -164,6 +164,12 @@ struct _recordset
 };
 typedef struct _recordset _rs;
 
+struct _setting
+{
+	int mutiple_sources;
+	int show_nulls;
+}_DB_setting;
+
 enum _fatal_error
 {
 	NO_SESSION=0x00,
@@ -193,6 +199,7 @@ extern struct _signaller _receive_signal;
 typedef size_t * _address;
 _address _object_table;
 short session_in_progress = 0;
+int _session_in_progress();
 struct _GENERIC * _object_ptr(int ref, enum _object_types obj_type);
 extern char * get_a_line(const char * prompt);
 extern char * get_a_password(const char * prompt);
@@ -1298,3 +1305,8 @@ int _next_source()
 	return MySQL_SUCCESS;
 }
 
+int _session_in_progress()
+{
+    if(session_in_progress == 1) return 1;
+    else return 0;
+}
