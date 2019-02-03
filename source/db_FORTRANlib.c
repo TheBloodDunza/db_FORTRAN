@@ -25,11 +25,9 @@
  * Author: Tom Fraser
  * Description: SQLite interface for FORTRAN - c wrapper
  * Date created: 22-NOV-2018
- * Date last modified: 01-JAN-2019
+ * Date last modified: 02-FEB-2019
  * GNU General Public License <http://www.gnu.org/licenses/>.
  * +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- * sudo apt-get install  libmysqlclient-dev
- * gcc -c db_FORTRANLib.c `mysql_config --cflags --libs`
  */
 
 #include <my_global.h>
@@ -76,7 +74,7 @@ enum _signals
 	sig_connect,
 	sig_disconnect,
 	sig_execute_command,
-	sig_select_database, //now obsolete
+	sig_select_database, // obsolete
 	sig_retrieve_data,
 	sig_next_record,
 	sig_previous_record,
@@ -113,7 +111,7 @@ enum _object_status
 	LOST_CONTEXT
 };
 
-struct _GENERIC // don't instantiate ...
+struct _GENERIC // don't instantiate!
 {
 	enum _object_types o_type;
 	int ref;
@@ -239,32 +237,28 @@ void _blank_slate();
 void _list_databases();
 int _stream();
 int _text_copy(char * s);
-
-// Problematic errors
 static const char * DB_ALREADY_CONNECTED =
-		"Already connected to server!";
+	"db_FORTRAN warning: Already connected to server!";
 static const char * NO_DB_CONNECTED =
-		"ERROR 1046 (3D000): No database is currently loaded!";
+	"ERROR 1046 (3D000): No database is currently loaded!";
 static const char * NOT_A_DB =
-		"Specified database is NOT on this server!";
+	"db_FORTRAN warning: Specified database is NOT on this server!";
 static const char * NOT_A_RECORDSET =
-		"Object is NOT a recordset!";
+	"db_FORTRAN warning: Object is NOT a recordset!";
 static const char * NO_DaTA =
-		"Retrieval resulted in NO ROWS.";
+	"db_FORTRAN Info: Retrieval resulted in NO ROWS.";
 static const char * RECORDSET_RANGE =
-		"Requested row is OUTSIDE the recordset range!";
+	"db_FORTRAN warning: Requested row is OUTSIDE the recordset range!";
 static const char * LOCO_INCOGNITO =
-		"Unimplemented parameter transmission location: ";
+	"db_FORTRAN warning: Unimplemented parameter transmission location: ";
 static const char * AINT_GOT_THAT =
 	"db_FORTRAN warning: Requested field %s is not in this recordset!";
-// login messages
 static const char * HOST_MSG = "Host [Max %d characters]: ";
 static const char * UID_MSG = "User ID [Max %d characters]: ";
 static const char * PWD_MSG = "Password [Max %d characters]: ";
 static const char * DB_MSG = "Database [Max %d characters]: ";
-// info messages
 static const char * RS_EXTRACTED = "OK, %d Records extracted.\n";
-static const char * RS_END = "End of Recordset!";
+static const char * RS_END = "db_FORTRAN Info: End of Recordset!";
 static const char * RS_START = "Start of Recordset!";
 static const char * RS_ROW =
 		"No row available, either recordset BOF or EOF!";
@@ -282,7 +276,11 @@ static const char * MIXED_CONTENT =
 	"db_FORTRAN Warning: requested field has NON-NUMERICAL data:";
 static const char * NO_MORE_RS =
 	"db_FORTRAN Info: no more recordsets available.";
-
+static const char * NULL_S='\0';
+static const char * NULLS="(null)";
+static const char * UNKNOWN_SIGNAL=
+	"db_FORTRAN Warning: Unrecognised signal received!";
+	
 int _c_signal(char * what)
 {
 	int ret_val = MySQL_GENERAL_FAIL;
@@ -368,7 +366,7 @@ int _decode_signal(char * what)
 			ret_val = _next_source();
 			break;
 		default:
-			printf("fuk nos \n");
+			_message(UNKNOWN_SIGNAL);
 	}
 	return ret_val;
 }
@@ -380,7 +378,7 @@ int _login()
 	MYSQL_ROW row;
 	int num_fields;
 	char prompt[32];
-
+	int multi = 0;
 	sprintf(prompt, HOST_MSG, max_login_);
 	char *host = get_n_chars(prompt, max_login_);
 	sprintf(prompt, UID_MSG, max_login_);
@@ -393,8 +391,8 @@ int _login()
 	nl(1);
 	mysql_library_init(0, NULL, NULL);
 	conn = mysql_init(NULL);
-	conn = mysql_real_connect(conn,host,uid,password,db,0,NULL,
-			CLIENT_MULTI_STATEMENTS);
+	if(_DB_setting.mutiple_sources==0) multi = CLIENT_MULTI_STATEMENTS;
+	conn = mysql_real_connect(conn,host,uid,password,db,0,NULL, multi);
 	if(conn==NULL)
 	{
 		free(host);
@@ -448,7 +446,6 @@ int _login()
 
 int _connect()
 {
-
 	MYSQL *conn = malloc(sizeof(MYSQL));
 	MYSQL_RES *result;
 	MYSQL_ROW row;
@@ -456,12 +453,12 @@ int _connect()
 	int i;
     char *pw;
     char prompt[32];
-
+    int multi = 0;
     if(_send_signal.aux_message_1[0] == '\0')
     {
         sprintf(prompt, PWD_MSG, max_login_);
 	    pw = get_limited_password(prompt, max_login_);
-	    printf("%s", SEPERATOR);
+	    _message(SEPERATOR);
 	    nl(1);
 	}
 	else
@@ -470,12 +467,12 @@ int _connect()
 		pw=malloc(len+1);
 	    strcpy(pw,_send_signal.aux_message_1);
 	}
-
 	mysql_library_init(0, NULL, NULL);
 	conn = mysql_init(NULL);
+	if(_DB_setting.mutiple_sources==0) multi = CLIENT_MULTI_STATEMENTS;
 	conn = mysql_real_connect(conn,_send_signal.message,
 			_send_signal.aux_message, pw,
-			_send_signal.aux_message_2,0,NULL,CLIENT_MULTI_STATEMENTS);
+			_send_signal.aux_message_2,0,NULL,multi);
 	if(conn==NULL)
 	{
 		free(conn);
@@ -586,15 +583,15 @@ struct _GENERIC * _object_ptr(int ref, enum _object_types obj_type)
 
 void _message(const char * info)
 {
-	if (_the_session.reporting_on) puts(info);
+	if(_the_session.reporting_on) puts(info);
 }
 
 int _execute_command(char * what)
 {
 	int ret_val = MySQL_GENERAL_FAIL;
 
-	if (_send_signal.data_external) ret_val =
-			mysql_query(CONNECTION, what);
+	if(_send_signal.data_external) ret_val=
+		mysql_query(CONNECTION, what);
 	else ret_val = mysql_query(CONNECTION, _send_signal.message);
 	if(mysql_error(CONNECTION)[0])
 	{
@@ -788,6 +785,7 @@ int _free_all()
 	free(_object_table);
 	mysql_library_end();
 	ret_val = MySQL_SUCCESS;
+	session_in_progress = 0;
 	return (ret_val);
 }
 
@@ -822,7 +820,6 @@ void _free_RS(int ref)
 int _next_record()
 {
 	int ret_val = MySQL_GENERAL_FAIL;
-
 	_rs * RS = (_rs *) _object_ptr(_send_signal.object, RECORDSET);
 	if (RS==NULL)
 	{
@@ -853,7 +850,6 @@ int _next_record()
 int _previous_record()
 {
 	int ret_val = MySQL_GENERAL_FAIL;
-
 	_rs * RS = (_rs *) _object_ptr(_send_signal.object, RECORDSET);
 	if (RS==NULL)
 	{
@@ -884,8 +880,9 @@ int _previous_record()
 int _print_row()
 {
 	int ret_val = MySQL_GENERAL_FAIL;
-
 	_rs * RS = (_rs *) _object_ptr(_send_signal.object, RECORDSET);
+	char * null_placeholder="";
+	if(_DB_setting.show_nulls==1) null_placeholder=NULL_S;
 	if (RS==NULL)
 	{
 		_message(NOT_A_RECORDSET);
@@ -895,7 +892,7 @@ int _print_row()
 	{
 		for(int i=0;i<RS->field_count;i++)
 		{
-			printf("%s\t", RS->row[i] ? RS->row[i] : "NULL");
+			printf("%s\t", RS->row[i] ? RS->row[i] : null_placeholder);
 		}
 		printf("\n");
 		ret_val = MySQL_SUCCESS;
@@ -992,7 +989,6 @@ int _item_value()
 	int ret_val = MySQL_GENERAL_FAIL;
 	int len;
 	_rs * RS = (_rs *) _object_ptr(_send_signal.object, RECORDSET);
-
 	if (RS==NULL)
 	{
 		_message(NOT_A_RECORDSET);
@@ -1094,7 +1090,8 @@ int _item_value()
 						        if(_send_signal.int_val_32>len)
 						        {
 						            memcpy(_receive_signal.short_buffer,
-									    RS->row[_send_signal.int_val-1], len);
+										RS->row[_send_signal.int_val-1]
+										, len);
 						        }
 						        else
 						        {
@@ -1108,7 +1105,8 @@ int _item_value()
 						    {
 							    _receive_signal.int_val = len;
 							    memcpy(_receive_signal.short_buffer,
-									RS->row[_send_signal.int_val-1], len);
+									RS->row[_send_signal.int_val-1]
+									, len);
 							    ret_val = MySQL_SUCCESS;
 						    }
 						}
@@ -1170,7 +1168,6 @@ void _list_databases()
 	MYSQL_ROW row;
 	int num_fields;
 	int i;
-
 	result = mysql_list_dbs(CONNECTION, (char *)NULL);
 	printf("Databases available in this session:\n");
 	while(row = mysql_fetch_row(result))
@@ -1190,6 +1187,7 @@ int _stream()
 
 	int ret_val = MySQL_GENERAL_FAIL;
 	_rs * RS = (_rs *) _object_ptr(_send_signal.object, RECORDSET);
+	char * null_placeholder="";
 	if (RS==NULL)
 	{
 		_message(NOT_A_RECORDSET);
@@ -1205,11 +1203,12 @@ int _stream()
 		nl(1);
 		printf("----------------------------------------------\n");
 		mysql_data_seek(RS->result, 0);
+		if(_DB_setting.show_nulls==1) null_placeholder=NULL_S;
 		while ((row = mysql_fetch_row(RS->result)))
 		{
 			for(int i=0;i<RS->field_count;i++)
 			{
-				printf("%s\t", row[i] ? row[i] : "NULL");
+				printf("%s\t", row[i] ? row[i] : null_placeholder);
 			}
 			nl(1);
 		}
@@ -1247,11 +1246,12 @@ int _stream()
 		fprintf(fp,"\n");
 		fprintf(fp,"----------------------------------------------\n");
 		mysql_data_seek(RS->result, 0);
+		if(_DB_setting.show_nulls==1) null_placeholder=NULLS;
 		while ((row = mysql_fetch_row(RS->result)))
 		{
 			for(int i=0;i<RS->field_count;i++)
 			{
-				fprintf(fp,"%s", row[i] ? row[i] : "NULL");
+				fprintf(fp,"%s", row[i] ? row[i] : null_placeholder);
 				fprintf(fp,"%c",c);
 			}
 			fprintf(fp,"\n");

@@ -28,7 +28,7 @@
 ! * Author: Tom Fraser
 ! * Description: MySQL interface for FORTRAN - wrapper
 ! * Date created: 30-NOV-2018
-! * Date last modified: 01-JAN-2019
+! * Date last modified: 02-FEB-2019
 ! * GNU General Public License <http://www.gnu.org/licenses/>.
 ! * +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -81,7 +81,6 @@ USE iso_c_binding,	ONLY : C_INT, C_INT128_T, C_INT16_T, C_INT64_T, &
 	INTEGER(C_INT), PARAMETER :: sig_stream = z'10'
 	INTEGER(C_INT), PARAMETER :: sig_list_databases = z'11'
 	INTEGER(C_INT), PARAMETER :: sig_next_source = z'12' !18
-
 	CHARACTER, PARAMETER :: nl = CHAR(10)
 	CHARACTER (LEN=*), PARAMETER :: no_session =  &
 			"- db_FORTRAN Fatal Error!"//nl &
@@ -111,8 +110,10 @@ USE iso_c_binding,	ONLY : C_INT, C_INT128_T, C_INT16_T, C_INT64_T, &
 			"db_FORTRAN Warning: Value does not fit in" &
 			//" the supplied variable:"
 	CHARACTER (LEN=*), PARAMETER :: empty_filename = &
-			"File name is BLANK! This is silly."
-	! Login restrictions
+			"db_FORTRAN Warning: File name is BLANK! This is silly."
+	CHARACTER (LEN=*), PARAMETER :: multiple_sources_info = &
+			"db_FORTRAN info: a change to the multiple sources " &
+			//"setting will only take effect after re-connection!"
 	INTEGER(C_INT), BIND(C, NAME = "max_login_") :: max_login = z'40'
 	INTEGER(C_INT), PARAMETER :: ordinal = 1
 	INTEGER(C_INT), PARAMETER :: short_buffer = 2
@@ -205,6 +206,7 @@ CONTAINS
 	END FUNCTION disclose
 
 END MODULE MySQL_types
+
 !***********************************************************************
 
 MODULE MySQL_interfaces
@@ -1958,7 +1960,7 @@ END FUNCTION db_next_source_RS
 
 SUBROUTINE db_settings(multiple_sources, show_nulls)
 USE iso_c_binding,	ONLY : C_CHAR, C_INT, C_NULL_CHAR
-USE MySQL_data, ONLY : DB_setting
+USE MySQL_data, ONLY : DB_setting, multiple_sources_info
 USE MySQL_interfaces, ONLY: session_started
 IMPLICIT NONE
 LOGICAL, INTENT(IN), OPTIONAL :: multiple_sources
@@ -1966,19 +1968,19 @@ LOGICAL, INTENT(IN), OPTIONAL :: show_nulls
 
     IF(PRESENT(multiple_sources)) THEN
         IF(multiple_sources.EQV..FALSE.) THEN
-		    DB_setting%multiples_allowed = 0
-		    IF(session_started().EQ.1) THEN
-		        PRINT*,"This will only ..."
-		    END IF
-		ELSE
 		    DB_setting%multiples_allowed = 1
+		ELSE
+		    DB_setting%multiples_allowed = 0
 		END IF
+	    IF(session_started().EQ.1) THEN
+	        PRINT*,multiple_sources_info
+	    END IF
 	END IF
 	IF(PRESENT(show_nulls)) THEN
         IF(show_nulls.EQV..TRUE.) THEN
 		    DB_setting%nulls_shown = 1
 		ELSE
-		    DB_setting%nulls_shown = 1
+		    DB_setting%nulls_shown = 0
 		END IF
 	END IF
 
