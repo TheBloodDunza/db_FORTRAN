@@ -770,14 +770,18 @@ int _free_all()
 	{
 		if (OBJECT_TABLE[i] != NULL)
 		{
-			void * whatever = _object_ptr(i, RECORDSET);
+		    void * whatever = _object_ptr(i, RECORDSET);
 			if (whatever != NULL)
 			{
 				_free_RS(i);
 			}
 			else
 			{
-				_free_db(i);
+			    void * whatever = _object_ptr(i, DATABASE);
+			    if (whatever != NULL)
+			    {		 
+				    _free_db(i);
+			    }
 			}
 		}
 	}
@@ -1271,6 +1275,7 @@ int _next_source()
 	if(mysql_more_results(CONNECTION)==0)
 	{
 		_message(NO_MORE_RS);
+	
 		return ret_val;
 	}
 	_rs * RS = (_rs *) _object_ptr(_send_signal.object, RECORDSET);
@@ -1287,6 +1292,8 @@ int _next_source()
 	if (mysql_next_result(CONNECTION)!=0)
 	{
 		_message(NO_MORE_RS);
+        _rs * RS = (_rs *) _object_ptr(_send_signal.object, RECORDSET);
+        RS->result=NULL;
 		return ret_val;
 	}
 	RS->result = mysql_store_result(CONNECTION);
