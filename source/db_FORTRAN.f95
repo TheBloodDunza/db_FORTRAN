@@ -1,4 +1,4 @@
-! db_FORTRAN.f95
+ db_FORTRAN.f95
 
 ! Copyright 2019 Tom Fraser <thomas.abercrombie.fraser@gmail.com>
 
@@ -11,7 +11,6 @@
 ! but WITHOUT ANY WARRANTY; without even the implied warranty of
 ! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ! GNU General Public License for more details.
-
 ! You should have received a copy of the GNU General Public License
 ! along with this program; if not, write to:
 ! Free Software Foundation, Inc.,
