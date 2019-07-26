@@ -1,18 +1,18 @@
 /*
  * utilities.c
- * 
+ *
  * Copyright 2017 Tom Fraser <thomas.abercrombie.fraser@gmail.com>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -22,9 +22,9 @@
  * Creation Date:	22-Nov-2017
  * Last update:		25-Dec-2017
  * Purpose:         utility routines library for i/o , etc.
- * 
+ *
  * gcc -c -std=c11 utilities.c
- * 
+ *
 */
 
 #include "utilities.h"
@@ -105,7 +105,7 @@ void echo_off()
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminal);
 }
 
-char * get_n_chars(const char * prompt, unsigned short i)
+char * get_n_chars(const char * prompt, int i)
 {
     char input[i+1];
     char * ret=NULL;
@@ -114,16 +114,16 @@ char * get_n_chars(const char * prompt, unsigned short i)
 
     printf("%s", prompt);
     fgets(input,i,stdin);
-    c=strchr(input,(unsigned char) 0x0A);
-    if(c!=NULL) *c='\0';
+    c=strchr(input,'\n');
+    if(c!=NULL) *c=0;
     j=strlen(input);
     if(j==0) return ret;
-    ret=(char*) malloc(j);
-    (char *) memccpy(ret, input, 0X00, (size_t) j);
+    ret=(char*) malloc(j+1);
+    memccpy(ret, input, 0, j+1);
     return ret;
 }
 
-char * get_limited_password(const char * prompt, unsigned short i)
+char * get_limited_password(const char * prompt, int i)
 {
     char * ret;
 

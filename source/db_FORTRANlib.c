@@ -166,6 +166,7 @@ struct _setting
 {
 	int mutiple_sources;
 	int show_nulls;
+	int exit_on_login_fail;
 }_DB_setting;
 
 enum _fatal_error
@@ -201,10 +202,9 @@ int _session_in_progress();
 struct _GENERIC * _object_ptr(int ref, enum _object_types obj_type);
 extern char * get_a_line(const char * prompt);
 extern char * get_a_password(const char * prompt);
-extern char * get_n_chars(const char * prompt, unsigned short i);
-extern char * get_limited_password(const char * prompt,
-		unsigned short i);
-extern unsigned short max_login_;
+extern char * get_n_chars(const char * prompt, int i);
+extern char * get_limited_password(const char * prompt, int i);
+extern int max_login_;
 extern void call_exit_();
 void _get_more_object_space();
 int _free_all();
@@ -280,7 +280,7 @@ static const char * NULL_S='\0';
 static const char * NULLS="(null)";
 static const char * UNKNOWN_SIGNAL=
 	"db_FORTRAN Warning: Unrecognised signal received!";
-	
+
 int _c_signal(char * what)
 {
 	int ret_val = MySQL_GENERAL_FAIL;
@@ -379,6 +379,8 @@ int _login()
 	int num_fields;
 	char prompt[32];
 	int multi = 0;
+	int ret_val=MySQL_GENERAL_FAIL;
+
 	sprintf(prompt, HOST_MSG, max_login_);
 	char *host = get_n_chars(prompt, max_login_);
 	sprintf(prompt, UID_MSG, max_login_);
@@ -401,7 +403,12 @@ int _login()
 		free(db);
 		free(conn);
 		_receive_signal.int_val = NO_CONNECTION;
-		call_exit_();
+		if (_DB_setting.exit_on_login_fail==0)
+		{
+		    call_exit_();
+		}
+		else
+		    return ret_val;
 	}
 	else
 	{
@@ -440,8 +447,9 @@ int _login()
 			_the_session.high_water_level = SYS_LOW_LIMIT +1;
 			_the_session.db_attached=1;
 		}
+		ret_val=MySQL_SUCCESS;
 	}
-	return 0;
+	return ret_val;
 }
 
 int _connect()
@@ -454,6 +462,8 @@ int _connect()
     char *pw;
     char prompt[32];
     int multi = 0;
+    int ret_val=MySQL_GENERAL_FAIL;
+
     if(_send_signal.aux_message_1[0] == '\0')
     {
         sprintf(prompt, PWD_MSG, max_login_);
@@ -478,7 +488,14 @@ int _connect()
 		free(conn);
 		free(pw);
 		_receive_signal.int_val = NO_CONNECTION;
-		call_exit_();
+		if (_DB_setting.exit_on_login_fail==0)
+		{
+		    call_exit_();
+		}
+		else
+		{
+		    return ret_val;
+		}
 	}
 	else
 	{
@@ -525,8 +542,9 @@ int _connect()
 			_the_session.high_water_level = SYS_LOW_LIMIT + 1;
 			_the_session.db_attached=1;
 		}
+		ret_val=MySQL_SUCCESS;
 	}
-	return 0;
+	return ret_val;
 }
 
 int _switch_database()
@@ -779,7 +797,7 @@ int _free_all()
 			{
 			    void * whatever = _object_ptr(i, DATABASE);
 			    if (whatever != NULL)
-			    {		 
+			    {
 				    _free_db(i);
 			    }
 			}
@@ -1275,7 +1293,7 @@ int _next_source()
 	if(mysql_more_results(CONNECTION)==0)
 	{
 		_message(NO_MORE_RS);
-	
+
 		return ret_val;
 	}
 	_rs * RS = (_rs *) _object_ptr(_send_signal.object, RECORDSET);

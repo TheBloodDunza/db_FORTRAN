@@ -1,23 +1,23 @@
 /*
  * utilities.h
- * 
+ *
  * Copyright 2017 Tom Fraser <thomas.abercrombie.fraser@gmail.com>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301, USA.
- * 
+ *
  * Program:			utilities.h
  * Author:			Tom Fraser
  * Creation Date:	22-Nov-2017
@@ -53,7 +53,7 @@ void echo_off();
 char * get_a_line(const char * prompt);
 char * get_a_password(const char * prompt);
 enum boolean is_a_file(const char * filename);
-char * get_n_chars(const char * prompt, unsigned short i);
-char * get_limited_password(const char * prompt, unsigned short i);
+char * get_n_chars(const char * prompt, int i);
+char * get_limited_password(const char * prompt, int i);
 
 #endif

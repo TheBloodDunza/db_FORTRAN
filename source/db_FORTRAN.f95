@@ -60,6 +60,7 @@ USE iso_c_binding,	ONLY : C_INT, C_INT128_T, C_INT16_T, C_INT64_T, &
 	TYPE, BIND(C) :: setting
 		INTEGER(C_INT) :: multiples_allowed
 		INTEGER(C_INT) :: nulls_shown
+		INTEGER(C_INT) :: exit_on_login_fail
 	END TYPE
 	TYPE(setting), BIND(C, NAME="_DB_setting") :: DB_setting
 	INTEGER(C_INT), PARAMETER :: sig_login = z'0'
@@ -114,7 +115,7 @@ USE iso_c_binding,	ONLY : C_INT, C_INT128_T, C_INT16_T, C_INT64_T, &
 	CHARACTER (LEN=*), PARAMETER :: multiple_sources_info = &
 			"db_FORTRAN info: a change to the multiple sources " &
 			//"setting will only take effect after re-connection!"
-	INTEGER(C_INT), BIND(C, NAME = "max_login_") :: max_login = z'40'
+	INTEGER(C_INT), BIND(C, NAME = "max_login_") :: max_login = 64
 	INTEGER(C_INT), PARAMETER :: ordinal = 1
 	INTEGER(C_INT), PARAMETER :: short_buffer = 2
 	INTEGER(C_INT), PARAMETER :: is_numeric = 0
@@ -525,9 +526,10 @@ IMPLICIT NONE
 	END INTERFACE copy_text
 
 	INTERFACE db_settings
-		SUBROUTINE db_settings(multiple_sources, show_nulls)
+		SUBROUTINE db_settings(multiple_sources, show_nulls, exit_on_login_fail)
 		LOGICAL, INTENT(IN), OPTIONAL :: multiple_sources
 		LOGICAL, INTENT(IN), OPTIONAL :: show_nulls
+		LOGICAL, INTENT(IN), OPTIONAL :: exit_on_login_fail
 		END SUBROUTINE db_settings
 	END INTERFACE db_settings
 
@@ -648,8 +650,7 @@ CHARACTER*(*), INTENT(IN), OPTIONAL :: db_name
 		send_signal%aux_message_2 = C_NULL_CHAR
 	ENDIF
 	IF ((LEN(host) < 65) .AND. (LEN(user) < 65) &
-			.AND. (LEN(password) < 65) .AND. (LEN(db_name) < 65)) &
-			THEN
+			.AND. (LEN(password) < 65) .AND. (LEN(db_name) < 65)) THEN
 		send_signal%data_external = .FALSE.
 		send_signal%message = C_CHAR_""//host//C_NULL_CHAR
 		send_signal%aux_message = C_CHAR_""//user//C_NULL_CHAR
@@ -1958,13 +1959,14 @@ TYPE(db_recordset), INTENT(IN) :: RS
 
 END FUNCTION db_next_source_RS
 
-SUBROUTINE db_settings(multiple_sources, show_nulls)
+SUBROUTINE db_settings(multiple_sources, show_nulls, exit_on_login_fail)
 USE iso_c_binding,	ONLY : C_CHAR, C_INT, C_NULL_CHAR
 USE MySQL_data, ONLY : DB_setting, multiple_sources_info
 USE MySQL_interfaces, ONLY: session_started
 IMPLICIT NONE
 LOGICAL, INTENT(IN), OPTIONAL :: multiple_sources
 LOGICAL, INTENT(IN), OPTIONAL :: show_nulls
+LOGICAL, INTENT(IN), OPTIONAL :: exit_on_login_fail
 
     IF(PRESENT(multiple_sources)) THEN
         IF(multiple_sources.EQV..FALSE.) THEN
@@ -1981,6 +1983,13 @@ LOGICAL, INTENT(IN), OPTIONAL :: show_nulls
 		    DB_setting%nulls_shown = 1
 		ELSE
 		    DB_setting%nulls_shown = 0
+		END IF
+	END IF
+	IF(PRESENT(exit_on_login_fail)) THEN
+        IF(exit_on_login_fail.EQV..TRUE.) THEN
+		    DB_setting%exit_on_login_fail = 0
+		ELSE
+		    DB_setting%exit_on_login_fail = 1
 		END IF
 	END IF
 
