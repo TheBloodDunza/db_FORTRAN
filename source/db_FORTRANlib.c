@@ -23,9 +23,9 @@
  * File: db_FORTRANLib.c
  * Version: 6.00
  * Author: Tom Fraser
- * Description: SQLite interface for FORTRAN - c wrapper
+ * Description: MySQL interface for FORTRAN - c wrapper
  * Date created: 22-NOV-2018
- * Date last modified: 02-FEB-2019
+ * Date last modified: 29-July-2019
  * GNU General Public License <http://www.gnu.org/licenses/>.
  * +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  */
