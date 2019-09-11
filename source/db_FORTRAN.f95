@@ -540,7 +540,7 @@ IMPLICIT NONE
 		END FUNCTION session_started
 	END INTERFACE session_started
 
-	END MODULE MySQL_interfaces
+END MODULE MySQL_interfaces
 
 !***********************************************************************
 
@@ -635,22 +635,27 @@ CHARACTER*(*), INTENT(IN) :: host
 CHARACTER*(*), INTENT(IN) :: user
 CHARACTER*(*), INTENT(IN), OPTIONAL :: password
 CHARACTER*(*), INTENT(IN), OPTIONAL :: db_name
+INTEGER ::l_pass, l_db
 
 	db_connect = .FALSE.
 	CALL clear_send()
 	send_signal%signal = sig_connect
 	IF(PRESENT(password)) THEN
 		send_signal%aux_message_1 = C_CHAR_""//password//C_NULL_CHAR
+		l_pass=LEN(password)
 	ELSE
 		send_signal%aux_message_1 = C_NULL_CHAR
+		l_pass=0
 	ENDIF
 	IF(PRESENT(db_name)) THEN
 		send_signal%aux_message_2 = C_CHAR_""//db_name//C_NULL_CHAR
+		l_db=LEN(db_name)
 	ELSE
 		send_signal%aux_message_2 = C_NULL_CHAR
+		l_db=0
 	ENDIF
 	IF ((LEN(host) < 65) .AND. (LEN(user) < 65) &
-			.AND. (LEN(password) < 65) .AND. (LEN(db_name) < 65)) THEN
+			.AND. (l_pass < 65) .AND. (l_db < 65)) THEN
 		send_signal%data_external = .FALSE.
 		send_signal%message = C_CHAR_""//host//C_NULL_CHAR
 		send_signal%aux_message = C_CHAR_""//user//C_NULL_CHAR

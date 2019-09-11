@@ -171,7 +171,7 @@ struct _setting
 
 enum _fatal_error
 {
-	NO_SESSION=0x00,
+	//NO_SESSION=0x00,
 	NO_CONNECTION,
 	MEMORY_TABLE_CORRUPTED,
 	CANT_ALLOCATE_MEMORY
@@ -239,6 +239,8 @@ int _stream();
 int _text_copy(char * s);
 static const char * DB_ALREADY_CONNECTED =
 	"db_FORTRAN warning: Already connected to server!";
+static const char * NO_SESSION =
+    "db_FORTRAN warning: You are not connected to a server!";
 static const char * NO_DB_CONNECTED =
 	"ERROR 1046 (3D000): No database is currently loaded!";
 static const char * NOT_A_DB =
@@ -284,12 +286,16 @@ static const char * UNKNOWN_SIGNAL=
 int _c_signal(char * what)
 {
 	int ret_val = MySQL_GENERAL_FAIL;
-	if ((session_in_progress == 0)
-			&& (_send_signal.signal != sig_connect)/*must be connect */
-			&& (_send_signal.signal != sig_login)) /* or login */
+	if (session_in_progress == 0)
 	{
-		_receive_signal.int_val = NO_SESSION;
-		call_exit_(); // request is bollox, bail out!
+		if (_send_signal.signal != sig_connect)/*must be connect */
+		{
+			if(_send_signal.signal != sig_login) /* or login */
+			{
+        	    _message(NO_SESSION);
+        		return ret_val;
+			}
+		}
 	}
 	return _decode_signal(what);
 }
@@ -601,24 +607,26 @@ struct _GENERIC * _object_ptr(int ref, enum _object_types obj_type)
 
 void _message(const char * info)
 {
-	if(_the_session.reporting_on) puts(info);
+	if((_the_session.reporting_on) || session_in_progress==0) puts(info);
 }
 
 int _execute_command(char * what)
 {
 	int ret_val = MySQL_GENERAL_FAIL;
 
-	if(_send_signal.data_external) ret_val=
-		mysql_query(CONNECTION, what);
+    mysql_use_result(CONNECTION);
+	if(_send_signal.data_external) ret_val = mysql_query(CONNECTION, what);
 	else ret_val = mysql_query(CONNECTION, _send_signal.message);
+
 	if(mysql_error(CONNECTION)[0])
 	{
 		printf("\nSQL Error: %s\n", mysql_error(CONNECTION));
+		mysql_use_result(CONNECTION);
 	}
 	else
 	{
-		printf("\nOK, %lld Row(s) affected.\n",
-				mysql_affected_rows(CONNECTION));
+		printf("\nOK, %lld Row(s) affected.\n",mysql_affected_rows(CONNECTION));
+        mysql_use_result(CONNECTION);
 	}
 	return ret_val;
 }
