@@ -19,8 +19,8 @@
  * MA 02110-1301, USA.
  * Program:			utilities.c
  * Author:			Tom Fraser
- * Creation Date:	22-Nov-2017
- * Last update:		25-Dec-2017
+ * Creation Date:	22-Nov-2018
+ * Last update:		11-Sep-2019
  * Purpose:         utility routines library for i/o , etc.
  *
  * gcc -c -std=c11 utilities.c

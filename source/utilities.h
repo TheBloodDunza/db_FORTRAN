@@ -20,8 +20,8 @@
  *
  * Program:			utilities.h
  * Author:			Tom Fraser
- * Creation Date:	22-Nov-2017
- * Last update:		25-Dec-2017
+ * Creation Date:	22-Nov-2018
+ * Last update:		11-Sep-2019
  * Purpose:         utility routines library for i/o , etc.
 */
 
